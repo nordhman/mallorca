@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mallorca 2026 – Hotellguide</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background-color: #130e05;
+            color: #f5f5f0;
+            overflow-x: hidden;
+        }
+
+        /* ===== INTRO SCREEN ===== */
+        #intro {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #130e05 0%, #2a1f1a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
+            visibility: visible;
+            opacity: 1;
+        }
+
+        #intro.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .intro-content {
+            text-align: center;
+        }
+
+        .intro-title {
+            font-size: clamp(3rem, 10vw, 5rem);
+            font-style: italic;
+            color: #c9a84c;
+            margin-bottom: 2rem;
+            letter-spacing: 2px;
+        }
+
+        .intro-button {
+            background-color: #c4643a;
+            color: #f5f5f0;
+            border: none;
+            padding: 16px 40px;
+            font-size: 1.1rem;
+            font-family: 'Georgia', serif;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            min-height: 48px;
+            min-width: 200px;
+        }
+
+        .intro-button:hover {
+            background-color: #b85430;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(196, 100, 58, 0.3);
+        }
+
+        /* ===== MAIN LAYOUT ===== */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 3rem;
+            min-height: 100vh;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                gap: 2rem;
+            }
+        }
+
+        /* ===== HOTELS SECTION ===== */
+        .hotels-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .hotels-header {
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #c9a84c;
+            padding-bottom: 1rem;
+        }
+
+        .hotels-header h1 {
+            font-size: 2.5rem;
+            font-style: italic;
+            color: #c9a84c;
+            margin-bottom: 0.5rem;
+        }
+
+        .hotels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            flex: 1;
+        }
+
+        @media (max-width: 768px) {
+            .hotels-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===== HOTEL CARD ===== */
+        .hotel-card {
+            background-color: #2a1f1a;
+            border: 1px solid #4a3f38;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateY(30px);
+            cursor: pointer;
+        }
+
+        .hotel-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .hotel-card:hover {
+            border-color: #c4643a;
+            box-shadow: 0 8px 24px rgba(196, 100, 58, 0.2);
+            transform: translateY(-4px);
+        }
+
+        .hotel-image-wrapper {
+            position: relative;
+            overflow: hidden;
+            height: 250px;
+            background-color: #2a1f1a;
+        }
+
+        .hotel-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .hotel-card:hover .hotel-image {
+            transform: scale(1.05);
+        }
+
+        .hotel-number {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background-color: #c4643a;
+            color: #f5f5f0;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .hotel-body {
+            padding: 1.5rem;
+        }
+
+        .hotel-header {
+            margin-bottom: 0.8rem;
+        }
+
+        .hotel-title {
+            font-size: 1.4rem;
+            font-style: italic;
+            color: #c9a84c;
+            margin-bottom: 0.25rem;
+        }
+
+        .hotel-location {
+            font-size: 0.95rem;
+            color: #b8a878;
+            margin-bottom: 0.5rem;
+        }
+
+        .hotel-badge {
+            display: inline-block;
+            background-color: #c4643a;
+            color: #f5f5f0;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+
+        .hotel-rating {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .stars {
+            color: #c9a84c;
+        }
+
+        .review-count {
+            color: #8a7a6f;
+            font-size: 0.85rem;
+        }
+
+        .rating-link {
+            margin-left: 1rem;
+            color: #c9a84c;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .rating-link:hover {
+            color: #f5f5f0;
+            text-decoration: underline;
+        }
+
+        .hotel-description {
+            color: #d0c8bf;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+        }
+
+        .hotel-details {
+            background-color: rgba(201, 168, 76, 0.1);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1.5rem;
+            border-left: 3px solid #c9a84c;
+        }
+
+        .hotel-detail-row {
+            margin: 0.5rem 0;
+            font-size: 0.9rem;
+            color: #d0c8bf;
+        }
+
+        .hotel-detail-row strong {
+            color: #c9a84c;
+        }
+
+        .hotel-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .hotel-link {
+            display: inline-block;
+            background-color: #c9a84c;
+            color: #130e05;
+            padding: 10px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+        }
+
+        .hotel-link:hover {
+            background-color: #f5f5f0;
+            box-shadow: 0 4px 12px rgba(201, 168, 76, 0.3);
+        }
+
+        .map-button {
+            background-color: #c4643a;
+            color: #f5f5f0;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            min-height: 40px;
+            font-size: 0.95rem;
+        }
+
+        .map-button:hover {
+            background-color: #b85430;
+            box-shadow: 0 4px 12px rgba(196, 100, 58, 0.3);
+        }
+
+        /* ===== MAP SECTION ===== */
+        .map-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            order: -1;
+        }
+
+        .map-header {
+            border-bottom: 2px solid #c9a84c;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .map-header h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            color: #c9a84c;
+        }
+
+        #map {
+            height: 600px;
+            border-radius: 8px;
+            border: 1px solid #3a2f28;
+            background-color: #2a1f1a;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        @media (max-width: 1024px) {
+            .map-section {
+                position: static;
+            }
+
+            #map {
+                height: 500px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .hotels-header h1 {
+                font-size: 1.8rem;
+            }
+
+            #map {
+                height: 400px;
+            }
+        }
+
+        /* ===== SMOOTH SCROLL ===== */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* ===== LEAFLET OVERRIDES ===== */
+        .leaflet-control-zoom {
+            border: 1px solid #3a2f28 !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+        }
+
+        .leaflet-control-zoom-in,
+        .leaflet-control-zoom-out {
+            background-color: #1a130a !important;
+            color: #c9a84c !important;
+            border-bottom: 1px solid #3a2f28 !important;
+        }
+
+        .leaflet-control-zoom-in:hover,
+        .leaflet-control-zoom-out:hover {
+            background-color: #2a1f1a !important;
+        }
+
+        .leaflet-popup-content-wrapper {
+            background-color: #1a130a !important;
+            color: #f5f5f0 !important;
+            border-radius: 6px !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        .leaflet-popup-content {
+            color: #f5f5f0 !important;
+        }
+
+        .leaflet-popup-tip {
+            background-color: #1a130a !important;
+        }
+
+        .leaflet-popup-content-wrapper a {
+            color: #c9a84c !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- INTRO SCREEN -->
+    <div id="intro">
+        <div class="intro-content">
+            <h1 class="intro-title">Mallorca 2026</h1>
+            <button class="intro-button" onclick="startExploring()">Utforska hotellen</button>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="container">
+        <!-- HOTELS SECTION -->
+        <div class="hotels-section">
+            <div class="hotels-header">
+                <h1>Våra favorithotell</h1>
+            </div>
+            <div class="hotels-grid" id="hotelsGrid"></div>
+        </div>
+
+        <!-- MAP SECTION -->
+        <div class="map-section">
+            <div class="map-header">
+                <h2>Hotellens läge</h2>
+            </div>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Hotel data
+        const hotels = [
+            {
+                id: 1,
+                name: "Posada del Marqués",
+                location: "Esporles",
+                type: "Luxury Old Style",
+                image: "https://cdn.grigora.app/projects/ddbb0ba8-76f8-4955-b617-2a2e9b9b3eb2/images/2026/2/26/poolsuper-viewj8o5d0.avif",
+                website: "https://www.slowdesignhotel.com/",
+                rating: 4.0,
+                reviews: 2,
+                tripadvisor: "https://www.tripadvisor.com/Hotel_Review-g1006061-d576436-Reviews-Posada_Del_Marques_A_Slow_Design_Hotel-Esporles_Majorca_Balearic_Islands.html",
+                description: "En exklusiv boutique-designhotell inbäddad i det vackra bergslandet. Perfekt för ett lugnt och romantiskt uppehåll med modernt design och traditionella detaljer.",
+                availability: "Måste kolla upp",
+                price: "Måste kolla upp",
+                lat: 39.6432,
+                lng: 2.5645
+            },
+            {
+                id: 2,
+                name: "Sa Vall Valldemossa",
+                location: "Valldemossa",
+                type: "B&B / Inn",
+                image: "https://www.fincahotels.com/fileadmin/_processed_/4/a/csm_hotel-sa-vall-valldemossa-02_a33aecfa28.webp",
+                website: "https://savallvalldemossa.es/",
+                rating: 4.3,
+                reviews: 97,
+                tripadvisor: "https://www.tripadvisor.com/Hotel_Review-g580319-d7806692-Reviews-Sa_Vall_Turismo_de_Interior-Valldemossa_Majorca_Balearic_Islands.html",
+                description: "En autentisk mallorkinsk finca omgiven av olivskogar och tystnad. Lyxig gästfrihet med spansk charm och moderna bekvämligheter.",
+                availability: "Måste kolla upp",
+                price: "Måste kolla upp",
+                lat: 39.7111,
+                lng: 2.6270
+            },
+            {
+                id: 3,
+                name: "Bordoy Continental",
+                location: "Valldemossa",
+                type: "Classic Hotel",
+                image: "https://www.bordoyhotels.com/idb/13106/El-hotel-23-800x400.jpg",
+                website: "https://www.bordoyhotels.com/en/hotel-continental-valldemossa/hotel",
+                rating: 4.0,
+                reviews: 371,
+                tripadvisor: "https://www.tripadvisor.com/Hotel_Review-g580319-d12278405-Reviews-Hotel_Bordoy_Continental_Valldemossa-Valldemossa_Majorca_Balearic_Islands.html",
+                description: "Ett klassiskt hotell med charm och historia i hjärtat av Valldemossa. Ideal bas för att utforska denna pittoreska by och dess omgivningar.",
+                availability: "Måste kolla upp",
+                price: "Måste kolla upp",
+                lat: 39.7353,
+                lng: 2.6127
+            },
+            {
+                id: 4,
+                name: "Hoposa Niu",
+                location: "Cala Sant Vicenç",
+                type: "Beach Resort",
+                image: "https://www.hoposa.es/images/hoposa/og/hotel-niu.jpg",
+                website: "https://www.hoposa.es/hotels/niu",
+                rating: 4.5,
+                reviews: 476,
+                tripadvisor: "https://www.tripadvisor.com/Hotel_Review-g23374692-d502317-Reviews-Hotel_Hoposa_Niu-Cala_Sant_Vicenc_Majorca_Balearic_Islands.html",
+                description: "En trivsam resorthotell med direkt tillgång till den vackra Cala Sant Vicenç-stranden. Perfekt för bad, sol och havsbranding.",
+                availability: "Måste kolla upp",
+                price: "Måste kolla upp",
+                lat: 39.9211,
+                lng: 3.0550
+            },
+            {
+                id: 5,
+                name: "Ca's Garriguer",
+                location: "Valldemossa",
+                type: "Luxury Agroturismo",
+                image: "https://static.wixstatic.com/media/59d58e_8d990bbe57ed413f9359c62bab4bc8ed~mv2.jpg/v1/fill/w_1647,h_1098,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/59d58e_8d990bbe57ed413f9359c62bab4bc8ed~mv2.jpg",
+                website: "https://booking.roomraccoon.es/ca-s-garriguer/en/",
+                rating: 4.0,
+                reviews: 92,
+                tripadvisor: "https://www.tripadvisor.com/Hotel_Review-g580319-d501556-Reviews-Cases_de_Ca_s_Garriguer-Valldemossa_Majorca_Balearic_Islands.html",
+                description: "En charmant lanthotell med traditionell arkitektur och varma värdskap. Idealt för gäster som söker autenticitet och personlig service.",
+                availability: "Måste kolla upp",
+                price: "Måste kolla upp",
+                lat: 39.7079,
+                lng: 2.5905
+            },
+            {
+                id: 6,
+                name: "Agroturismo Alquería Blanca",
+                location: "Bunyola",
+                type: "Agroturismo",
+                image: "https://lirp.cdn-website.com/430c5cc6/dms3rep/multi/opt/vista-pajaro-apaisada-2304w.jpg",
+                website: "https://www.alqueria-blanca.com/",
+                rating: 4.0,
+                reviews: 435,
+                tripadvisor: "https://www.tripadvisor.com/Hotel_Review-g1068161-d583741-Reviews-Alqueria_Blanca-Bunyola_Majorca_Balearic_Islands.html",
+                description: "En historisk lantgård från 1200-talet med modernistisk arkitektur inbäddad i Serra de Tramuntana. Perfekt för gäster som söker lugn och autentisk mallorkinsk tradition.",
+                availability: "Måste kolla upp",
+                price: "Måste kolla upp",
+                lat: 39.6923,
+                lng: 2.6779
+            },
+            {
+                id: 7,
+                name: "Finca Hotel Es Castell",
+                location: "Binibona",
+                type: "Lantgård",
+                image: "https://static.wixstatic.com/media/0d7734_212e31ab9b0b4ed0b5582706a4e53b5c~mv2_d_2500_1667_s_2.jpg/v1/fill/w_1647,h_1098,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/0d7734_212e31ab9b0b4ed0b5582706a4e53b5c~mv2_d_2500_1667_s_2.jpg",
+                website: "https://www.hotelescastell.com/",
+                rating: 4.3,
+                reviews: 305,
+                tripadvisor: "https://www.booking.com/reviews/es/hotel/finca-es-castell-illes-balears.sv.html",
+                description: "En landsbygdshotell i hjärtat av Selva-regionen med rustik charm och moderna bekvämligheter. Ideal för ett autentiskt och lugnt Mallorca-uppehåll.",
+                availability: "Måste kolla upp",
+                price: "Måste kolla upp",
+                lat: 39.7906,
+                lng: 2.9264
+            }
+        ];
+
+        let map;
+        let markers = [];
+
+        // Initialize map
+        function initializeMap() {
+            // Center on Mallorca (very wide view, island positioned higher)
+            const center = [40.6, 2.9];
+
+            map = L.map('map', {
+                center: center,
+                zoom: 4.8,
+                scrollWheelZoom: true,
+                preferCanvas: true
+            });
+
+            // Roligare kartastil - CartoDB Positron
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                maxZoom: 19
+            }).addTo(map);
+
+            // Add hotel markers
+            hotels.forEach(hotel => {
+                const markerHtml = `<div style="background-color: #c4643a; color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; border: 2px solid #f5f5f0; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">${hotel.id}</div>`;
+
+                const customIcon = L.divIcon({
+                    html: markerHtml,
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20],
+                    popupAnchor: [0, -20],
+                    className: ''
+                });
+
+                const marker = L.marker([hotel.lat, hotel.lng], { icon: customIcon })
+                    .addTo(map)
+                    .bindPopup(`
+                        <div style="min-width: 200px;">
+                            <h3 style="margin: 0 0 4px 0; color: #c9a84c;">${hotel.name}</h3>
+                            <p style="margin: 0 0 8px 0; font-size: 12px; color: #b8a878;">${hotel.location}</p>
+                            <p style="margin: 0; font-size: 13px;">⭐ ${hotel.rating} (${hotel.reviews} recensioner)</p>
+                        </div>
+                    `, {
+                        closeButton: true,
+                        className: 'custom-popup'
+                    });
+
+                marker.hotel = hotel;
+                markers.push(marker);
+            });
+
+            // Auto-fit all markers with more padding to show entire island
+            if (markers.length > 0) {
+                const group = new L.featureGroup(markers);
+                map.fitBounds(group.getBounds(), { padding: [100, 100] });
+                // Ensure zoom doesn't go too high
+                if (map.getZoom() > 11) {
+                    map.setZoom(11);
+                }
+            }
+        }
+
+        // Render hotel cards
+        function renderHotelCards() {
+            const grid = document.getElementById('hotelsGrid');
+
+            hotels.forEach((hotel, index) => {
+                const card = document.createElement('div');
+                card.className = 'hotel-card';
+                card.innerHTML = `
+                    <div class="hotel-image-wrapper">
+                        <img src="${hotel.image}" alt="${hotel.name}" class="hotel-image" loading="lazy">
+                        <div class="hotel-number">${hotel.id}</div>
+                    </div>
+                    <div class="hotel-body">
+                        <div class="hotel-header">
+                            <h3 class="hotel-title">${hotel.name}</h3>
+                            <p class="hotel-location">${hotel.location}</p>
+                            <span class="hotel-badge">${hotel.type}</span>
+                        </div>
+                        <div class="hotel-rating">
+                            <span class="stars">★★★★★</span>
+                            <span>${hotel.rating}</span>
+                            <span class="review-count">(${hotel.reviews})</span>
+                            <a href="${hotel.tripadvisor}" target="_blank" rel="noopener noreferrer" class="rating-link">Läs betyg →</a>
+                        </div>
+                        <p class="hotel-description">${hotel.description}</p>
+                        <div class="hotel-details">
+                            <p class="hotel-detail-row"><strong>Tillgänglighet:</strong> ${hotel.availability}</p>
+                            <p class="hotel-detail-row"><strong>Pris:</strong> ${hotel.price}</p>
+                        </div>
+                        <div class="hotel-actions">
+                            <a href="${hotel.website}" target="_blank" rel="noopener noreferrer" class="hotel-link">Se hotellet</a>
+                            <button class="map-button" onclick="zoomToHotel(${hotel.id})">Visa på karta</button>
+                            <a href="https://www.tripadvisor.com/Search?q=${encodeURIComponent(hotel.name)}" target="_blank" rel="noopener noreferrer" class="map-button" style="background-color: #0066cc; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #f5f5f0;">TripAdvisor</a>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            // Intersection Observer for scroll animation
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+
+            document.querySelectorAll('.hotel-card').forEach(card => {
+                observer.observe(card);
+            });
+        }
+
+        // Zoom to hotel on map
+        function zoomToHotel(hotelId) {
+            const marker = markers.find(m => m.hotel.id === hotelId);
+            if (marker) {
+                map.setView([marker.hotel.lat, marker.hotel.lng], 11);
+                marker.openPopup();
+
+                // Scroll map into view
+                document.querySelector('.map-section').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Start exploring (hide intro)
+        function startExploring() {
+            const intro = document.getElementById('intro');
+            intro.classList.add('hidden');
+
+            // Initialize map after intro is hidden
+            setTimeout(() => {
+                if (!map) {
+                    initializeMap();
+                }
+            }, 100);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            renderHotelCards();
+        });
+    </script>
+</body>
+</html>
